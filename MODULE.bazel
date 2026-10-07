@@ -1,0 +1,114 @@
+# SPDX-License-Identifier: Apache-2.0
+# RISC-V architectural tests for the Vreteno core.
+#
+# Every tool comes from here, by checksum or by commit: the core and
+# its toolchains from TxHDL, the RISC-V compiler, the Sail reference
+# model, the tests themselves, and Verilator. The machine needs
+# Bazelisk and Git, and nothing else.
+module(
+    name = "vreteno_conformance",
+    version = "0.0.0",
+    bazel_compatibility = [">=8.0.0"],
+)
+
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "rules_cc", version = "0.2.22")
+bazel_dep(name = "rules_shell", version = "0.8.0")
+
+# TxHDL, from its GitHub mirror, at a named commit. It holds the
+# Vreteno core, and it registers the C and C++ toolchain (LLVM over a
+# pinned Debian sysroot) and the prebuilt Verilator, so neither comes
+# from the machine.
+bazel_dep(name = "txhdl", version = "0.0.0")
+git_override(
+    module_name = "txhdl",
+    commit = "894cc2e3b296de0640a2096c7291bfd9c2dd7485",
+    remote = "https://github.com/filmil/hdl-txhdl.git",
+)
+
+# Rust, at the version TxHDL compiles with. The Rust rules read the
+# version only from the root module, so it is stated here again.
+bazel_dep(name = "rules_rust", version = "0.74.0")
+
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2021",
+    versions = ["1.90.0"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+# Verilator simulates the core's netlist. The binary is TxHDL's: it
+# is built once by `filmil/bazel_toolchains_verilator` and downloaded.
+bazel_dep(name = "rules_verilator", version = "1.1.2")
+bazel_dep(name = "rules_verilog", version = "1.4.3")
+bazel_dep(name = "bazel_toolchains_verilator", version = "0.1.0")
+
+verilator_binary = use_extension(
+    "@bazel_toolchains_verilator//verilator:extension.bzl",
+    "verilator_binary",
+)
+use_repo(verilator_binary, "verilator_prebuilt")
+
+register_toolchains("@verilator_prebuilt//:toolchain")
+
+http_archive = use_repo_rule(
+    "@bazel_tools//tools/build_defs/repo:http.bzl",
+    "http_archive",
+)
+
+# The compiler for the tests: the xPack build of GCC 15 for bare-metal
+# RISC-V. The test suite asks for GCC 15 and binutils 2.44 or later.
+http_archive(
+    name = "riscv_gcc",
+    build_file = "//third_party/riscv_gcc:BUILD.toolchain",
+    sha256 = "aaaa8060c914851a3e5ee1ba82cc3d6f80972f90638a05c6e823a37557a33758",
+    strip_prefix = "xpack-riscv-none-elf-gcc-15.2.0-1",
+    urls = [
+        "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v15.2.0-1/xpack-riscv-none-elf-gcc-15.2.0-1-linux-x64.tar.gz",
+    ],
+)
+
+# The reference model: the RISC-V Sail model, the release the test
+# suite is written against. It computes the expected results that the
+# tests check themselves against.
+http_archive(
+    name = "sail_riscv",
+    build_file = "//third_party/sail:BUILD.sail",
+    sha256 = "8bb3626a6ce5d45c1d1fa7b907f9d9602cc23270883e470db5d6401f26a2e143",
+    strip_prefix = "sail-riscv-Linux-x86_64",
+    urls = [
+        "https://github.com/riscv/sail-riscv/releases/download/0.15/sail-riscv-Linux-x86_64.tar.gz",
+    ],
+)
+
+# The tests: RISC-V International's architectural certification
+# tests (ACT4), at a named commit. `//act:repo.bzl` reads the header
+# of every test and writes the catalog the build selects from.
+act_tests = use_repo_rule("//act:repo.bzl", "act_tests")
+
+act_tests(
+    name = "riscv_arch_test",
+    sha256 = "f7a1d312bbb1d88b14d4ee0eb9dce61b56acfbc88c7db65980b065910853167d",
+    strip_prefix = "riscv-arch-test-a215271eab1270afb9c97b713753f6da658ac0d5",
+    url = "https://github.com/riscv-non-isa/riscv-arch-test/archive/a215271eab1270afb9c97b713753f6da658ac0d5.tar.gz",
+)
+
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
+
+# LaTeX, for the report: a pinned TinyTeX that the ruleset fetches, so
+# nothing is installed on the machine. The root module registers it, so
+# it wins over the ruleset's own `system` toolchain. TinyTeX lacks
+# IEEEtran, pgf and listings; the report takes TxHDL's vendored copies.
+bazel_dep(name = "rules_latex_host", version = "0.3.1")
+
+hermetic_latex = use_extension(
+    "@rules_latex_host//latex:extensions.bzl",
+    "hermetic_latex",
+)
+hermetic_latex.toolchain()
+use_repo(hermetic_latex, "hermetic_latex", "hermetic_latex_ghostscript")
+
+register_toolchains("@hermetic_latex//:all")

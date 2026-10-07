@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: Apache-2.0
+# The rules that build and run the architectural tests; see defs.bzl.
+exports_files(["check.sh"])

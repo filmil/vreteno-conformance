@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@buildifier_prebuilt//:rules.bzl", "buildifier")
+
+# Formats every BUILD and .bzl file:  bazel run //:buildifier
+buildifier(
+    name = "buildifier",
+    exclude_patterns = ["./bazel-*/*"],
+    lint_mode = "fix",
+    mode = "fix",
+)

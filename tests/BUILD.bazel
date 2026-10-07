@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: Apache-2.0
+# The architectural tests that apply to Vreteno, run on the netlist and
+# on the Sail reference model.
+#
+#   bazel test //tests:vreteno_rtl_tests    # on the netlist
+#   bazel test //tests:vreteno_sail_tests   # the self-check on Sail
+load("@riscv_arch_test//:tests.bzl", "ACT_COMMIT", "TESTS")
+load("//act:defs.bzl", "act_suite", "act_suite_report", "select_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+# What Vreteno implements, by the names the tests' headers use. It
+# must agree with //act/config:rvtest_config.h and sail.json.
+VRETENO_EXTENSIONS = [
+    "I",
+    "M",
+    "Zmmul",
+    "A",
+    "Zaamo",
+    "Zalrsc",
+    "C",
+    "Zca",
+    "Zicsr",
+    "Zifencei",
+    "Zicntr",
+    "Zihintpause",
+    "Zihintntl",
+    "Sm",
+    "S",
+    "U",
+    "Sv32",
+    "Svbare",
+    "Svade",
+]
+
+VRETENO_PARAMS = {
+    "MXLEN": 32,
+    "MISALIGNED_LDST": False,
+    "NUM_PMP_ENTRIES": 0,
+}
+
+# Tests the core is known to fail, each with the issue that tracks it.
+VRETENO_KNOWN_FAILURES = {
+    # mstatus.TVM, TW and TSR are not writable.
+    "SvSm_sv_mstatus_tvm_test-00": "https://git.hdlfactory.com/HDL/txhdl/issues/1347",
+}
+
+# Suites left out by hand, with the reason.
+VRETENO_EXCLUDED = {
+    # The Svade tests clear menvcfgh.ADUE first, and menvcfgh exists
+    # only from privileged version 1.12. Vreteno is a 1.11 core (see
+    # //act/config:rvtest_config.h), so the suite does not apply.
+    # Svade's behaviour, a page fault on a clear A or D bit, is still
+    # checked by the Sv suite.
+    "Svade": "the suite writes menvcfgh, which a privileged 1.11 core does not have " +
+             "(https://git.hdlfactory.com/HDL/txhdl/issues/1348)",
+}
+
+VRETENO_TESTS = select_tests(
+    TESTS,
+    VRETENO_EXTENSIONS,
+    VRETENO_PARAMS,
+    exclude_suites = list(VRETENO_EXCLUDED.keys()),
+)
+
+act_suite(
+    name = "vreteno",
+    known_failures = VRETENO_KNOWN_FAILURES,
+    tests = VRETENO_TESTS,
+)
+
+# The report's data: //paper includes it, and the daily workflow
+# publishes report.html.
+act_suite_report(
+    name = "report",
+    act_commit = ACT_COMMIT,
+    # The RV32 tests and the privileged tests, before selection.
+    catalog = len(TESTS),
+    excluded = VRETENO_EXCLUDED,
+    extensions = VRETENO_EXTENSIONS,
+    known_failures = VRETENO_KNOWN_FAILURES,
+    tests = VRETENO_TESTS,
+)

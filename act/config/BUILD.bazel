@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# The ACT4 configuration of the Vreteno testbench: the macros the tests
+# leave to a device, what the core implements, its memory map, and the
+# Sail configuration that describes the same machine.
+exports_files([
+    "link.ld",
+    "rvmodel_macros.h",
+    "rvtest_config.h",
+    "sail.json",
+])

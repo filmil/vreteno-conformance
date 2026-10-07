@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# The fetched bare-metal RISC-V toolchain, as Bazel sees it.
+#
+# The compiler driver finds its own pieces by path at run time: `cc1`,
+# the assembler, the linker and the specs. So every file of the
+# archive is one filegroup, which an action takes as its inputs.
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "all",
+    srcs = glob(
+        ["**"],
+        exclude = ["**/BUILD*", "**/*.py"],
+    ),
+)
+
+filegroup(
+    name = "gcc",
+    srcs = ["bin/riscv-none-elf-gcc"],
+)
+
+filegroup(
+    name = "objdump",
+    srcs = ["bin/riscv-none-elf-objdump"],
+)

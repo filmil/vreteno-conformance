@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: Apache-2.0
+# The device under test: the Vreteno hart with an AXI4 manager port,
+# lowered from TxHDL to Verilog.
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_verilog//verilog:defs.bzl", "verilog_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# Prints the Verilog of the hart with its tracker and its AXI4 pins.
+rust_binary(
+    name = "netlist",
+    srcs = ["netlist.rs"],
+    edition = "2021",
+    proc_macro_deps = ["@txhdl//lib:txhdl_macros"],
+    deps = [
+        "@txhdl//cpu/vreteno:vreteno32",
+        "@txhdl//lib:txhdl",
+        "@txhdl//lib/parts:txhdl_parts",
+    ],
+)
+
+# The netlist as a file of the build.
+genrule(
+    name = "dut_v",
+    outs = ["dut.v"],
+    cmd = "$(location :netlist) > $@",
+    tools = [":netlist"],
+)
+
+verilog_library(
+    name = "dut_vl",
+    srcs = [":dut_v"],
+    top_module = "dut",
+)

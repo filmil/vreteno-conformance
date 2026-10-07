@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# TxHDL's dependencies come from the custom registry first, then from
+# the Bazel Central Registry.
+common --registry=https://raw.githubusercontent.com/filmil/bazel-registry/main
+common --registry=https://bcr.bazel.build
+
+# The C and C++ toolchain is the hermetic one TxHDL registers. Bazel
+# must not fall back to whatever compiler the machine has.
+common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+common --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+
+build --workspace_status_command=tools/workspace_status.sh
+
+test --test_output=errors
+
+common:ci --curses=no
+common:ci --color=no
+common:ci --show_progress_rate_limit=60
+
+try-import %workspace%/user.bazelrc

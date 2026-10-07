@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# The testbench: the Vreteno netlist under Verilator, with a memory on
+# its AXI4 port.
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_verilator//verilator:defs.bzl", "verilator_cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+verilator_cc_library(
+    name = "dut_verilated",
+    copts = ["-Wno-sign-compare"],
+    module = "//dut:dut_vl",
+    vopts = [
+        "-Wno-fatal",
+        "-O3",
+    ],
+)
+
+# Runs one test ELF:  sim --elf <elf> --out <result>
+cc_binary(
+    name = "sim",
+    srcs = ["main.cc"],
+    copts = ["-O2"],
+    deps = [":dut_verilated"],
+)
