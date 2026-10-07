@@ -1,0 +1,70 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{Describing Vreteno to the tests}
+\label{sec:config}
+
+The tests need to know what the core implements. Three files tell
+them, and a fourth tells the reference model. All four describe the
+same machine, and they are written from the core's source in TxHDL,
+\code{cpu/vreteno/src/isa.rs} and \code{core.rs}.
+
+\begin{itemize}
+\item \code{rvtest\_config.h} defines a macro for each extension and
+parameter. ACT4 generates this file from a Unified Database
+description, with Ruby tools; here it is written by hand.
+\item \code{rvmodel\_macros.h} says how the device ends a test and
+prints a character. Vreteno's testbench speaks HTIF as Sail does, so
+one set of macros serves both.
+\item \code{link.ld} places the test at \code{0x4000\_0000}.
+\item \code{sail.json} configures Sail to behave as Vreteno does where
+the specification lets an implementation choose.
+\end{itemize}
+
+\subsection{Extensions and parameters}
+
+The extensions are \Extensions. The parameters are XLEN of 32, no
+misaligned loads and stores in hardware, and no physical memory
+protection. Table~\ref{tab:config} gives the choices that matter for
+the tests and the reason for each.
+
+\begin{table}[t]
+\centering
+\caption{Choices in the description of Vreteno}
+\label{tab:config}
+\footnotesize
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.36\columnwidth}>{\raggedright\arraybackslash}p{0.58\columnwidth}@{}}
+\toprule
+Choice & Reason in the core \\
+\midrule
+Privileged version 1.11 & No \code{menvcfg} or \code{senvcfg}
+(Section~\ref{sec:findings}). \\
+\code{mtvec}, \code{stvec} direct only & The core clears the two mode
+bits on a write. \\
+Misaligned access traps & A load or store that is not aligned raises
+an address-misaligned exception. \\
+Misaligned AMO traps as misaligned & The specification allows this or
+an access fault; the core does the former. \\
+\code{mtval} nonzero & The core writes the instruction for an illegal
+instruction, the pc for a breakpoint, the address for a misaligned or
+faulting access. \\
+A and D bits: Svade & The page walker never writes; a clear A bit, or
+a clear D bit on a store, is a page fault. \\
+No PMP, no \code{mcountinhibit} & Neither is implemented. \\
+\code{mvendorid} and the rest 0 & All four read as zero. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{What is left out}
+
+One suite is left out by hand. The Svade tests begin by clearing
+\code{menvcfgh.ADUE}, a register that exists only from privileged
+version 1.12. On a 1.11 core the first instruction of the test traps,
+and Sail also fails the test in that configuration. The behaviour
+Svade names, a page fault on a clear A or D bit, is still tested by the
+Sv suite.
+
+Everything else the selection drops, it drops for a stated reason: the
+test needs an extension the core lacks, such as F, D or the bit
+manipulation extensions, or it needs a parameter the core does not
+have, such as physical memory protection entries or misaligned access
+in hardware.

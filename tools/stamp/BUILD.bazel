@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Writes buildstamp.tex from Bazel's workspace status.
+rust_binary(
+    name = "stamp",
+    srcs = ["main.rs"],
+    edition = "2021",
+)

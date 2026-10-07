@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# Builds everything and runs every test, both simulators, against the
+# TxHDL commit MODULE.bazel pins.
+name: test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Mondays at 03:00 UTC.
+    - cron: "0 3 * * 1"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazelbuild/setup-bazelisk@v3
+      - id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      # The cache is keyed by the day, so it lasts 24 hours.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-test-${{ runner.os }}-${{ steps.day.outputs.day }}
+      - name: Build
+        run: bazel build --config=ci //...
+      - name: Test
+        run: bazel test --config=ci //...

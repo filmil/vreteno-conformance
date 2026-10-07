@@ -1,0 +1,69 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{The device under test}
+\label{sec:dut}
+
+The device under test is Vreteno's netlist, the Verilog that TxHDL
+writes for the core. It is the same netlist that the board's
+bitstream is built from, so the tests check what is synthesized rather
+than a model of it.
+
+\subsection{The wrapper}
+
+The core on its own speaks TxHDL's transaction channels, not a standard
+bus. A small TxHDL unit, \code{Dut}, joins three existing parts so that
+the netlist has one standard AXI4 manager port (Fig.~\ref{fig:dut}).
+The three parts are the hart, which is the core with its memory
+management unit; the tracker, which turns the core's loads, stores and
+fetches into AXI4 bursts; and an adapter that puts the five AXI4
+channels on pins. All three come from TxHDL unchanged. The wrapper is
+about 250 lines of Rust, most of them port names, and TxHDL lowers it
+with the core into one Verilog file.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=5mm and 4mm, font=\footnotesize]
+\node[box, minimum width=22mm] (hart) {hart\\\scriptsize core, MMU, I-cache};
+\node[box, right=of hart, minimum width=14mm] (trk) {tracker};
+\node[box, right=of trk, minimum width=14mm] (pins) {AXI4\\pins};
+\node[draw, dashed, rounded corners=2pt, inner sep=3mm,
+      fit=(hart)(trk)(pins), label={[lbl]above:\code{Dut}, the netlist}] (dut) {};
+\node[tool, below=13mm of trk, minimum width=50mm] (mem)
+  {memory model in C++\\\scriptsize ELF loader, \code{tohost}, console};
+\draw[fl] (hart) -- (trk);
+\draw[fl] (trk) -- (pins);
+\draw[fl, <->] (pins.south) -- node[lbl, right, pos=0.72] {AXI4} (pins.south |- mem.north);
+\end{tikzpicture}
+\caption{The device under test. Only the memory model is written for
+this testbench; everything inside the dashed box is TxHDL's.}
+\label{fig:dut}
+\end{figure}
+
+\subsection{Booting into the test}
+
+Vreteno fetches its first 4\,KiB from a memory inside the core, which
+the netlist initializes. The wrapper puts two instructions there:
+\code{lui t0,0x40000} and \code{jr t0}. They jump to
+\code{0x4000\_0000}, where every test is linked. On the board, that
+address is the start of DDR3, and the core's instruction cache holds
+words from that range. So the tests run from cached memory, as the
+board's programs do.
+
+\subsection{The memory and the end of a run}
+
+The testbench is a C++ program around the Verilated netlist. It loads
+the test's ELF into a sparse memory and answers every AXI4 burst from
+it, with every \code{ready} held high. The interrupt lines and the
+debug module's lines are held low.
+
+A test ends the way it ends on Sail, through the HTIF \code{tohost}
+word. The testbench reads the word's address from the ELF's symbol
+table. A write to its upper half completes a command. Device~1 with
+command~1 prints a character on the console. Any other command with an
+odd lower half ends the run: 1 means the test passed, and 3 means it
+failed.
+
+The testbench writes a result file for each run: the status, the
+cycles, the instructions retired, and the console text. A run that
+reaches 20 million cycles stops with the status \code{TIMEOUT}. The
+build does not stop when a test fails. The result file records the
+failure, a test target reads it, and this report counts it.

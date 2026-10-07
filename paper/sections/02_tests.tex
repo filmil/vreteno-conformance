@@ -1,0 +1,75 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{The architectural tests}
+\label{sec:tests}
+
+The architectural tests are assembly programs, one file each, grouped
+into suites by extension. This report uses ACT4, the current framework
+of the suite, at commit \code{\ActCommit}~\cite{act,ctp}. Each test file
+starts with a header that states what the test needs: the extensions it
+requires, its \code{-march} string, and any parameter of the core it
+depends on, such as XLEN or the number of physical memory protection
+entries.
+
+\subsection{Self-checking tests}
+
+An ACT4 test checks itself. It is built twice, and the reference model
+runs in between. Fig.~\ref{fig:flow} shows the four steps.
+
+\begin{enumerate}
+\item The test is compiled with \code{-DSIGNATURE}. Built this way, it
+stores every result it computes into a region of memory called the
+signature.
+\item Sail runs that program and writes the signature region to a file.
+\item The signature is turned into assembler source, one \code{.word}
+directive per value.
+\item The test is compiled again with \code{-DRVTEST\_SELFCHECK},
+including that source. Now each time the test computes a value, it
+compares it with Sail's value at the same place, and branches to a
+failure routine on a mismatch.
+\end{enumerate}
+
+The final program decides for itself whether it passed. It prints
+\code{TEST PASSED} or \code{TEST FAILED} on a console, and on a failure
+it also prints the instruction, the register, the expected value and
+the value it got. A device under test only has to run the program,
+provide the console, and report how the program ended.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=4.5mm and 3mm, font=\footnotesize]
+\node[art] (src) {test \code{.S}};
+\node[tool, below=of src] (cc1) {GCC, \code{-DSIGNATURE}};
+\node[tool, below=of cc1] (sail1) {Sail};
+\node[tool, below=of sail1] (fmt) {\code{sigfmt}};
+\node[tool, below=of fmt] (cc2) {GCC, \code{-DRVTEST\_SELFCHECK}};
+\node[art, below=of cc2] (elf) {self-checking ELF};
+\node[chk, below left=6mm and -8mm of elf] (sail2) {Sail\\self-check};
+\node[chk, below right=6mm and -8mm of elf] (rtl) {Vreteno netlist\\under Verilator};
+\node[art, below=24mm of elf] (rep) {result files, report};
+\draw[fl] (src) -- (cc1);
+\draw[fl] (cc1) -- node[lbl,right] {\code{.sig.elf}} (sail1);
+\draw[fl] (sail1) -- node[lbl,right] {signature} (fmt);
+\draw[fl] (fmt) -- node[lbl,right] {expected results} (cc2);
+\draw[fl] (src.west) -- ++(-16mm,0) |- (cc2.west);
+\draw[fl] (cc2) -- (elf);
+\draw[fl] (elf) -- (sail2);
+\draw[fl] (elf) -- (rtl);
+\draw[fl] (sail2.south) -- (rep);
+\draw[fl] (rtl.south) -- (rep);
+\end{tikzpicture}
+\caption{How one test becomes two results. Every box is a Bazel action.}
+\label{fig:flow}
+\end{figure}
+
+\subsection{Which tests apply}
+
+A test applies to a core when the core implements every extension the
+test requires and has every parameter value the test states. The
+ACT4 framework makes this selection in Python, from a description of
+the core in the RISC-V Unified Database format. This build makes the
+same selection in Bazel's own language, from a list of extensions and
+parameters (Section~\ref{sec:config}). It applies the same rules,
+including comparisons such as \code{NUM\_PMP\_ENTRIES: '>0'}.
+
+The selection is made over \NCatalog{} tests: the RV32 suites and the
+privileged suites of the catalog. It keeps \NTests{} of them.

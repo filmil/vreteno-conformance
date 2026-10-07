@@ -1,0 +1,50 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{Results}
+\label{sec:results}
+
+On \ReportDate, \NRtlPass{} of the \NTests{} tests passed on Vreteno's
+netlist. The failures, \NRtlFail{} in all, divide into two kinds:
+known failures, each tracked by an issue (\NKnownFail), and new ones
+(\NUnknownFail).
+\NSailPass{} of the \NTests{} tests passed their self-check on Sail. The
+Sail column is a check on the harness rather than on the core: each
+self-checking program must pass on the model that wrote its expected
+values. When it does, the description of the core, the compiler flags
+and the test sources agree with one another.
+
+Table~\ref{tab:suites} gives the results by suite. The checks column
+counts the values a test compares with Sail's. The counts exclude the
+fill of the unused signature area and the marker words. The suite that
+compares the most is \code{\MostChecksSuite}, with \MostChecks{}
+values in \MostChecksTests{} tests.
+
+\begin{table}[t]
+\centering
+\caption{Results by suite}
+\label{tab:suites}
+\scriptsize
+\input{suites}
+\end{table}
+
+\subsection{Cycles}
+
+The \NTests{} runs took \TotalCycles{} cycles to retire \TotalInstr{}
+instructions, \MeanCPI{} cycles per instruction on average.
+Fig.~\ref{fig:cpi} breaks this down by suite.
+
+These numbers describe the testbench as much as the core. An
+architectural test is long straight-line code that runs once. The
+instruction cache then helps only within a line of four words, and
+each new line is fetched over the bus. The slowest suite is \code{\SlowSuite}, at \SlowCPI{} cycles
+per instruction, and the fastest is \code{\FastSuite}, at \FastCPI.
+The multiply and divide instructions take several cycles each in
+Vreteno's sequencer, which is why \code{M} and \code{Zmmul} are above
+the rest. The figures are a record that the runs completed
+at a plausible speed. They are not a performance claim.
+
+\begin{figure}[t]
+\centering
+\input{cpichart}
+\caption{Mean cycles per instruction on the netlist, by suite.}
+\label{fig:cpi}
+\end{figure}

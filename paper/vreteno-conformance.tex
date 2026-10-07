@@ -1,0 +1,130 @@
+% SPDX-License-Identifier: Apache-2.0
+%
+% The conformance report: the RISC-V architectural tests on the Vreteno
+% core. Every number comes from results.tex and the tables beside it,
+% which //tools/report writes from the runs of the build that typesets
+% this file.
+\documentclass[journal,9pt]{IEEEtran}
+
+\newcommand{\listingsize}{\fontsize{6}{7}\selectfont}
+\input{housestyle}
+
+\InputIfFileExists{buildstamp.tex}{}{}
+\providecommand{\buildstamp}{Draft build (outside the Bazel flow).}
+\input{results}
+
+% Console output of a test, as printed: no highlighting, lines broken.
+\lstdefinestyle{console}{style=ascii}
+\definecolor{barfill}{RGB}{59,91,146}
+\definecolor{tint}{RGB}{232,238,250}
+\tikzset{
+  art/.style={box,fill=tint},
+  tool/.style={box,fill=bgshade},
+  chk/.style={box,fill=green!12},
+}
+
+\title{RISC-V Architectural Conformance\\of the Vreteno Core}
+
+\author{Filip Filmar%
+\thanks{The author is independent, at f@hdlfactory.com.}%
+\thanks{This report is generated. A build of the repository
+\code{filmil/vreteno-conformance} runs the tests and typesets the
+report from the results of that run, every day. Every count, table and
+chart in it comes from that build.}%
+\thanks{The author used a large language model, Claude, as an assistant
+in building the test harness and in writing this report; every commit
+of the repository says so and lists the prompts that led to it,
+verbatim.}%
+\thanks{\buildstamp}}
+
+\markboth{Vreteno conformance, \ReportDate}{Filmar: RISC-V Architectural Conformance of the Vreteno Core}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Vreteno is a three-stage RV32IMAC core with machine, supervisor and
+user modes and Sv32 paging, written in the hardware description
+language TxHDL. This report runs the official RISC-V architectural
+tests on it. The tests come from RISC-V International's ACT4 suite, and
+the Sail reference model computes the result each test must reproduce.
+Each test runs on the core's Verilog netlist under Verilator. Of the
+\NCatalog{} tests in the catalog, \NTests{} apply to Vreteno, in
+\NSuites{} suites. \NRtlPass{} of them pass on the netlist, and
+\NSailPass{} pass their own self-check on Sail. Together the tests
+compare \NChecks{} values with Sail's. The first run, on 2026-10-07,
+had one failure, and it is a real defect: the core cannot set
+\code{mstatus.TVM}. A second finding of that run is that the core has
+no \code{menvcfg}, so it conforms to version 1.11 of the privileged
+specification rather than 1.12. Both are filed as issues against
+TxHDL. The build that produces this report fetches
+every tool by checksum, and it runs every day against the latest
+commit of the core.
+\end{abstract}
+
+\begin{IEEEkeywords}
+RISC-V, architectural tests, conformance, Sail, Verilator, hardware
+verification, TxHDL.
+\end{IEEEkeywords}
+
+{\footnotesize\tableofcontents}
+
+\input{sections/01_intro}
+\input{sections/02_tests}
+\input{sections/03_dut}
+\input{sections/04_config}
+\input{sections/05_build}
+\input{sections/06_results}
+\input{sections/07_findings}
+\input{sections/08_limits}
+\input{sections/09_conclusion}
+
+\appendices
+\section{The failing tests}
+\label{sec:failures}
+\input{failures}
+
+\section{Every test}
+\label{sec:every}
+Tables~\ref{tab:tests} and after list each test with the values it
+checks, the cycles its run took on the netlist, and its cycles per
+instruction. A test's name is shown without the name of its suite.
+\input{tests}
+
+\begin{thebibliography}{10}
+\bibitem{act}
+RISC-V International, ``RISC-V Architectural Certification Tests,''
+\url{https://github.com/riscv-non-isa/riscv-arch-test}, commit
+\code{\ActCommit}.
+
+\bibitem{ctp}
+RISC-V International, ``Certification Test Plan,''
+\url{https://riscv.github.io/riscv-arch-test/ctp.html}.
+
+\bibitem{sail}
+RISC-V International, ``Sail RISC-V model,''
+\url{https://github.com/riscv/sail-riscv}, release 0.15.
+
+\bibitem{priv}
+RISC-V International, \emph{The RISC-V Instruction Set Manual, Volume
+II: Privileged Architecture}, versions 1.11 and 1.12.
+
+\bibitem{txhdl}
+F.~Filmar and D.~Jankovi\'c, ``TxHDL: A Hardware Description Language
+That Is a Rust Library,'' \url{https://www.hdlfactory.com/txhdl/},
+2026.
+
+\bibitem{verilator}
+W.~Snyder et al., ``Verilator,'' \url{https://verilator.org}.
+
+\bibitem{issue1347}
+TxHDL issue 1347, ``mstatus.TVM, TW and TSR are not writable,''
+\url{https://git.hdlfactory.com/HDL/txhdl/issues/1347}.
+
+\bibitem{issue1348}
+TxHDL issue 1348, ``no menvcfg or senvcfg, so the core is privileged
+version 1.11,''
+\url{https://git.hdlfactory.com/HDL/txhdl/issues/1348}.
+\end{thebibliography}
+
+\end{document}

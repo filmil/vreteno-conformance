@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: Apache-2.0
+# The daily conformance run, against the newest TxHDL commit on GitHub.
+#
+# It builds the report, publishes it as a release named
+# report-YYYY-MM-DD-<TxHDL commit>, and copies the web page and the PDF
+# to static/vreteno-conformance in filmil/hdlfactory.com.template, which
+# serves them at https://www.hdlfactory.com/vreteno-conformance/. It
+# releases only when this repository or TxHDL changed since the last
+# release. Then it runs every test, so a new failure turns the run red.
+name: daily
+
+on:
+  schedule:
+    # Every day at 04:00 UTC.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazelbuild/setup-bazelisk@v3
+      - id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      # The cache is keyed by the day, so it lasts 24 hours.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-daily-${{ runner.os }}-${{ steps.day.outputs.day }}
+
+      - name: Check out the newest TxHDL
+        id: txhdl
+        run: |
+          sha="$(git ls-remote https://github.com/filmil/hdl-txhdl.git refs/heads/main | cut -f1)"
+          [ -n "${sha}" ] || { echo "cannot read TxHDL's main" >&2; exit 1; }
+          git clone --quiet --filter=blob:none https://github.com/filmil/hdl-txhdl.git "${RUNNER_TEMP}/txhdl"
+          git -C "${RUNNER_TEMP}/txhdl" checkout --quiet --detach "${sha}"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "TxHDL at ${sha}"
+
+      # A release names its inputs in its notes. When the last release
+      # names the same two commits, there is nothing new to publish. A
+      # release that cannot be read publishes again (fail open).
+      - name: Is there something to release
+        id: changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TXHDL: ${{ steps.txhdl.outputs.sha }}
+        run: |
+          inputs="inputs: vreteno-conformance ${GITHUB_SHA} txhdl ${TXHDL}"
+          echo "inputs=${inputs}" >> "$GITHUB_OUTPUT"
+          last="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""' || true)"
+          if [ -n "${last}" ] && gh release view "${last}" --json body --jq .body | grep -qxF "${inputs}"; then
+            echo "The last release, ${last}, has the same inputs; nothing to release."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the report
+        if: steps.changed.outputs.changed == 'true'
+        env:
+          TXHDL_COMMIT: ${{ steps.txhdl.outputs.sha }}
+        run: |
+          bazel build --config=ci --override_module=txhdl="${RUNNER_TEMP}/txhdl" \
+            //paper:vreteno-conformance //tests:report
+          mkdir -p site
+          cp bazel-bin/tests/report.html site/index.html
+          cp bazel-bin/paper/vreteno-conformance.pdf site/vreteno-conformance.pdf
+          cp bazel-bin/tests/results.tsv site/results.tsv
+          ls -l site
+
+      - name: Release
+        if: steps.changed.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TXHDL: ${{ steps.txhdl.outputs.sha }}
+          DAY: ${{ steps.day.outputs.day }}
+          INPUTS: ${{ steps.changed.outputs.inputs }}
+        run: |
+          tag="report-${DAY}-${TXHDL:0:12}"
+          if gh release view "${tag}" > /dev/null 2>&1; then
+            echo "${tag} exists already; it is left as it is."
+            exit 0
+          fi
+          cp site/index.html site/vreteno-conformance.html
+          printf '%s\n\n%s\n' \
+            "The RISC-V architectural tests on Vreteno, TxHDL commit ${TXHDL}, run on ${DAY}." \
+            "${INPUTS}" > notes.md
+          gh release create "${tag}" --target "${GITHUB_SHA}" \
+            --title "Conformance report ${DAY}" --notes-file notes.md \
+            site/vreteno-conformance.pdf site/vreteno-conformance.html site/results.tsv
+
+      - name: Publish on hdlfactory.com
+        if: steps.changed.outputs.changed == 'true' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          external_repository: filmil/hdlfactory.com.template
+          publish_dir: ./site
+          destination_dir: static/vreteno-conformance
+          publish_branch: main
+          deploy_key: ${{ secrets.HDLFACTORY_DEPLOY_KEY }}
+          commit_message: "chore(vreteno-conformance): the report of ${{ steps.day.outputs.day }}"
+
+      - name: Kill ssh-agent
+        if: steps.changed.outputs.changed == 'true' && github.ref == 'refs/heads/main'
+        run: killall ssh-agent || true
+
+      # Last, so that a failure still publishes the report that shows it.
+      - name: Test
+        env:
+          TXHDL_COMMIT: ${{ steps.txhdl.outputs.sha }}
+        run: bazel test --config=ci --override_module=txhdl="${RUNNER_TEMP}/txhdl" //...

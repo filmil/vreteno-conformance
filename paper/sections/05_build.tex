@@ -1,0 +1,62 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{The build}
+\label{sec:build}
+
+Bazel runs everything in this report, and it fetches every tool it
+uses by checksum or by commit. Nothing is installed on the machine
+beyond Bazelisk and Git. Table~\ref{tab:tools} lists the tools.
+
+\begin{table}[t]
+\centering
+\caption{What the build fetches}
+\label{tab:tools}
+\footnotesize
+\begin{tabular}{@{}lp{0.6\columnwidth}@{}}
+\toprule
+Tool & Version and source \\
+\midrule
+Vreteno & TxHDL commit \code{\TxhdlCommit}, from its GitHub mirror \\
+Tests & riscv-arch-test commit \code{\ActCommit} \\
+Reference & \SailVersion, prebuilt release \\
+Compiler & \GccVersion \\
+Simulator & Verilator 5.046, TxHDL's prebuilt binary \\
+C and C++ & LLVM over a pinned Debian sysroot, from TxHDL \\
+\LaTeX & a pinned TinyTeX, with TxHDL's copies of IEEEtran, pgf and
+listings \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{From test file to target}
+
+A repository rule downloads the test suite and reads the configuration
+header of every test file. It writes the headers into a list that the
+build reads when it analyses the targets, so that selecting the tests
+needs no Python. For each selected test, a Bazel macro makes one
+target that builds the self-checking ELF in the four steps of
+Fig.~\ref{fig:flow}. It makes two more targets that run the ELF, one on
+Sail and one on the netlist, and a test target for each run.
+\code{sigfmt}, the tool in step three, is a short Rust program. It
+replaces the Python function in ACT4 that does the same job.
+
+Each step is an action with declared inputs and outputs, so Bazel runs
+the \NTests{} tests in parallel and caches every step. A change to the
+core reruns the netlist runs and nothing else. A change to the
+description of the core rebuilds every ELF.
+
+\subsection{Known failures}
+
+A test that the core is known to fail is listed with the URL of the
+issue that tracks it. Its test target then passes while the run fails,
+and fails once the run passes. The list therefore shrinks when the
+core is fixed, and \code{bazel test} stays useful for changes to the
+harness while a defect is open. This report reads the result files,
+not the test targets, so a known failure counts as a failure here.
+
+\subsection{Every day}
+
+A workflow runs the build every day against the newest commit of
+TxHDL. It typesets this report, publishes it as a release of the
+repository, and publishes the same results as a web page on
+hdlfactory.com. The commit of the core and the date are in the title
+footnote of every copy.

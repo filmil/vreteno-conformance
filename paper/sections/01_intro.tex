@@ -1,0 +1,43 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{Introduction}
+\label{sec:intro}
+
+\IEEEPARstart{A}{} processor conforms to RISC-V when every
+instruction it implements gives the result the specification defines.
+RISC-V International publishes a suite of tests for this, the
+architectural tests~\cite{act}. Each test runs a fixed program and
+checks the values it computes against values the Sail reference
+model~\cite{sail} computed for the same program. A core that passes a
+test agrees with the reference model on everything that test checks.
+
+Vreteno is the RISC-V core of the TxHDL project~\cite{txhdl}. It
+implements RV32IMAC: the base integer set, multiply and divide, the
+atomic instructions and the compressed ones. It also has machine,
+supervisor and user modes, Sv32 virtual memory, and an instruction
+cache. TxHDL writes the core as a Rust program and lowers it to
+Verilog. The project checks that netlist against its own reference
+model in lockstep, and it runs on an Artix-7 board.
+
+Those checks say that the core does what its authors meant. The
+architectural tests say something else: that what the authors meant is
+what the specification says. This report applies them.
+
+The result is short. Of the \NCatalog{} tests in the catalog,
+\NTests{} apply to Vreteno, and \NRtlPass{} pass on its netlist, which
+is \PassPercent{}\,\%. The tests compare \NChecks{} values with Sail's.
+The first run found one real defect in the core, described in
+Section~\ref{sec:findings}, and it is the run's one failure.
+
+\subsection{How to read this report}
+
+Section~\ref{sec:tests} says how the tests work.
+Section~\ref{sec:dut} describes the device under test: the netlist, the
+memory around it, and how a run ends.
+Section~\ref{sec:config} says how Vreteno is described to the tests,
+and why each choice was made.
+Section~\ref{sec:build} describes the build that runs it all.
+Sections~\ref{sec:results} and~\ref{sec:findings} give the results and
+the defects found.
+Section~\ref{sec:limits} lists what this run does not check.
+The appendices give the console output of each failing test and a line
+for every test.

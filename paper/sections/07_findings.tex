@@ -1,0 +1,54 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{Findings}
+\label{sec:findings}
+
+The first run, on 2026-10-07 against TxHDL commit \code{894cc2e3b296},
+found two departures from the specification. Both are filed as issues
+against TxHDL, and both are in the privileged architecture. In that
+run, every unprivileged instruction the core implements matched Sail
+on every value the tests check. A later run that fails anything else
+shows it in Section~\ref{sec:results} and in
+Appendix~\ref{sec:failures}, as a failure that is not known.
+
+\subsection{\code{mstatus.TVM}, \code{TW} and \code{TSR} cannot be set}
+
+The test \code{SvSm\_sv\_mstatus\_tvm\_test-00} sets \code{mstatus.MPP}
+to 3 and \code{mstatus.TVM} to 1, then reads \code{mstatus} back. Sail
+reads \code{0x00101800}. Vreteno reads \code{0x00001800}: the TVM bit,
+bit 20, did not stick. The test's own console output is in
+Appendix~\ref{sec:failures}.
+
+The cause is in the core's write mask for \code{mstatus},
+\code{MSTATUS\_W = 0x000e\_19aa}, which leaves out bits 20, 21 and 22:
+TVM, TW and TSR. The privileged specification requires all three to be
+writable when supervisor mode is implemented~\cite{priv}. Without them,
+machine mode cannot trap a supervisor's \code{satp} accesses and
+\code{sfence.vma}, nor its \code{wfi} and \code{sret}. A hypervisor or
+a monitor that emulates those instructions relies on these traps.
+The issue is TxHDL issue 1347~\cite{issue1347}.
+
+\subsection{No \code{menvcfg} and no \code{senvcfg}}
+
+Version 1.12 of the privileged specification adds \code{menvcfg}, which
+a core must have when it implements user mode, and \code{senvcfg},
+which it must have when it implements supervisor mode. Vreteno has
+neither, and an access to either raises an illegal instruction
+exception. Described as a 1.12 core, Vreteno fails every test: the
+tests write \code{menvcfg} while they boot. Described as a 1.11 core,
+it passes all but one.
+
+The core does have \code{mstatush}, which is also new in 1.12, so it
+sits between the two versions. This report describes it as 1.11, and
+the Svade suite, which needs \code{menvcfgh}, does not run. The issue
+is TxHDL issue 1348~\cite{issue1348}. Adding the two registers, with
+their fields read-only zero where the core lacks the feature, would
+let the core be described as 1.12 and the Svade suite run.
+
+\subsection{A choice that is not a defect}
+
+The first run had six more failures, all in tests of atomic
+instructions at misaligned addresses. Vreteno raised
+address-misaligned there, and the first configuration of Sail expected
+an access fault. The specification allows either. The fix was in
+\code{sail.json}, which now says that the core raises address-misaligned,
+and the six tests pass.

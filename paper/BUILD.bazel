@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: Apache-2.0
+# The conformance report, an IEEE two-column article:
+#   bazel build //paper:vreteno-conformance
+load("@rules_latex_host//latex:defs.bzl", "latex_document")
+load(":defs.bzl", "flat_files")
+
+package(default_visibility = ["//visibility:public"])
+
+# The class, the drawing package and the listings package, which the
+# pinned TinyTeX lacks. TxHDL vendors them, unmodified, with their
+# licences; this report uses those copies rather than a second set.
+flat_files(
+    name = "vendored_tex",
+    srcs = [
+        "@txhdl//third_party/ieeetran:files",
+        "@txhdl//third_party/listings:files",
+        "@txhdl//third_party/pgf:files",
+    ],
+)
+
+# The report's data, from the runs: //tests:report.
+flat_files(
+    name = "report_data",
+    srcs = ["//tests:report"],
+)
+
+# The commit of this repository and the day of the build, from Bazel's
+# workspace status (tools/workspace_status.sh).
+genrule(
+    name = "buildstamp",
+    outs = ["buildstamp.tex"],
+    cmd = "$(location //tools/stamp) bazel-out/stable-status.txt bazel-out/volatile-status.txt > $@",
+    stamp = 1,
+    tools = ["//tools/stamp"],
+)
+
+latex_document(
+    name = "vreteno-conformance",
+    data = [
+        ":buildstamp",
+        ":report_data",
+        ":vendored_tex",
+    ],
+    main = "vreteno-conformance.tex",
+    deps = ["housestyle.tex"] + glob(["sections/*.tex"]),
+)

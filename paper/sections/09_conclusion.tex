@@ -1,0 +1,14 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{Conclusion}
+\label{sec:conclusion}
+
+The official RISC-V architectural tests now run on Vreteno's netlist,
+every day, with every tool fetched by the build. In this run,
+\NRtlPass{} of the \NTests{} tests that apply to the core pass. The
+first run found a real defect: \code{mstatus.TVM}, \code{TW} and \code{TSR}
+cannot be set. The run also found that the core lacks the environment
+configuration registers of privileged version 1.12.
+
+Both are filed. When either is fixed, the run says so on the next day.
+The fixed test starts to pass, and its entry in the list of known
+failures has to go.

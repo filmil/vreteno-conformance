@@ -1,0 +1,27 @@
+% SPDX-License-Identifier: Apache-2.0
+\section{What this run does not check}
+\label{sec:limits}
+
+A passing run says that Vreteno agrees with Sail on the values the
+selected tests check. It does not say more than that, and five gaps
+are worth stating.
+
+\begin{itemize}
+\item \textbf{Interrupts.} The testbench raises no interrupt, so the
+tests that need a timer or an interrupt controller are not selected.
+The core's interrupt path is checked by TxHDL's own tests, not here.
+\item \textbf{The Svade suite} does not run, for the reason in
+Section~\ref{sec:findings}.
+\item \textbf{One simulator.} The netlist runs under Verilator only.
+TxHDL also writes VHDL, and its own tests run that under nvc, but the
+architectural tests do not.
+\item \textbf{The description is written by hand.} If
+\code{rvtest\_config.h} or \code{sail.json} claims a behaviour the core
+does not have, the tests check the claim. A self-check on Sail
+catches a description that disagrees with itself, not one that
+disagrees with the core. The table of choices in
+Section~\ref{sec:config} is what a reviewer should check against the
+core's source.
+\item \textbf{The board.} The tests run on the netlist in simulation,
+with a memory model, not on the Artix-7 board with its DDR3.
+\end{itemize}

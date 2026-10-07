@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Writes the report's tables, its HTML page and a TSV from the runs.
+rust_binary(
+    name = "report",
+    srcs = ["main.rs"],
+    edition = "2021",
+)
