@@ -81,3 +81,7 @@ TXHDL_COMMIT=$(git -C ../hdl-txhdl rev-parse HEAD) \
   `filmil/hdlfactory.com.template`.
   It skips the release and the copy when neither this repository nor
   TxHDL has changed since the last release.
+  To release and publish anyway, run it from the Actions tab with
+  **force** ticked, or with
+  `gh workflow run daily.yml --repo filmil/vreteno-conformance -f force=true`.
+  A forced run replaces the assets of a release that has the same tag.
