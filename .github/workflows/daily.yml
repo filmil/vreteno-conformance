@@ -6,7 +6,10 @@
 # to static/vreteno-conformance in filmil/hdlfactory.com.template, which
 # serves them at https://www.hdlfactory.com/vreteno-conformance/. It
 # releases only when this repository or TxHDL changed since the last
-# release. Then it runs every test, so a new failure turns the run red.
+# release, unless it is run by hand with "force" ticked: then it builds,
+# releases and publishes regardless, replacing the assets of a release
+# with the same tag. Then it runs every test, so a new failure turns the
+# run red.
 name: daily
 
 on:
@@ -14,6 +17,11 @@ on:
     # Every day at 04:00 UTC.
     - cron: "0 4 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Release and publish even when nothing changed since the last release"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,17 +56,22 @@ jobs:
 
       # A release names its inputs in its notes. When the last release
       # names the same two commits, there is nothing new to publish. A
-      # release that cannot be read publishes again (fail open).
+      # release that cannot be read publishes again (fail open). A run by
+      # hand with "force" ticked publishes whatever the last release says.
       - name: Is there something to release
         id: changed
         env:
           GH_TOKEN: ${{ github.token }}
           TXHDL: ${{ steps.txhdl.outputs.sha }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
         run: |
           inputs="inputs: vreteno-conformance ${GITHUB_SHA} txhdl ${TXHDL}"
           echo "inputs=${inputs}" >> "$GITHUB_OUTPUT"
           last="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""' || true)"
-          if [ -n "${last}" ] && gh release view "${last}" --json body --jq .body | grep -qxF "${inputs}"; then
+          if [ "${FORCE}" = "true" ]; then
+            echo "Forced by hand: releasing and publishing."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif [ -n "${last}" ] && gh release view "${last}" --json body --jq .body | grep -qxF "${inputs}"; then
             echo "The last release, ${last}, has the same inputs; nothing to release."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -85,13 +98,20 @@ jobs:
           TXHDL: ${{ steps.txhdl.outputs.sha }}
           DAY: ${{ steps.day.outputs.day }}
           INPUTS: ${{ steps.changed.outputs.inputs }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
         run: |
           tag="report-${DAY}-${TXHDL:0:12}"
+          cp site/index.html site/vreteno-conformance.html
           if gh release view "${tag}" > /dev/null 2>&1; then
-            echo "${tag} exists already; it is left as it is."
+            if [ "${FORCE}" = "true" ]; then
+              echo "${tag} exists; forced, so its assets are replaced."
+              gh release upload "${tag}" --clobber \
+                site/vreteno-conformance.pdf site/vreteno-conformance.html site/results.tsv
+            else
+              echo "${tag} exists already; it is left as it is."
+            fi
             exit 0
           fi
-          cp site/index.html site/vreteno-conformance.html
           printf '%s\n\n%s\n' \
             "The RISC-V architectural tests on Vreteno, TxHDL commit ${TXHDL}, run on ${DAY}." \
             "${INPUTS}" > notes.md
