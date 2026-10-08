@@ -23,7 +23,7 @@ bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "txhdl", version = "0.0.0")
 git_override(
     module_name = "txhdl",
-    commit = "894cc2e3b296de0640a2096c7291bfd9c2dd7485",
+    commit = "48daf9778addc8c81e0746e66b8f8aa6e0fe84a5",
     remote = "https://github.com/filmil/hdl-txhdl.git",
 )
 

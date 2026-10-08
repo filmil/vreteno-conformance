@@ -9,6 +9,7 @@ first run found a real defect: \code{mstatus.TVM}, \code{TW} and \code{TSR}
 cannot be set. The run also found that the core lacks the environment
 configuration registers of privileged version 1.12.
 
-Both are filed. When either is fixed, the run says so on the next day.
-The fixed test starts to pass, and its entry in the list of known
-failures has to go.
+Both were filed, and TxHDL fixed both the next day. The run that day
+showed the loop working: the TVM test started to pass, its entry in
+the list of known failures had to go, and the same run caught a new
+defect in the core's data cache within hours of its commit.

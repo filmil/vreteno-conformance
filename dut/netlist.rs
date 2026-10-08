@@ -18,7 +18,7 @@
 //! whole test runs from the testbench's memory.
 //!
 //! The binary prints the Verilog of `Dut` on standard output.
-use txhdl::comp::{chan, join2, DefaultClock, In, Out, Unit};
+use txhdl::comp::{chan, join2, signal, DefaultClock, In, Out, Unit};
 use txhdl::types::{Bit, U};
 use txhdl::{lower, Trace};
 use txhdl_parts::bus::axi::{Ar, Aw, AxiHost, Done, Grant, Issue, B, R, W};
@@ -171,11 +171,14 @@ impl Unit for Dut {
         let (w_tx, w_rx) = chan::<W<32, 4>, DefaultClock>();
         let (b_tx, b_rx) = chan::<B<IW>, DefaultClock>();
         let (r_tx, r_rx) = chan::<R<32, IW>, DefaultClock>();
+        // No other host writes the memory here, so the data cache's snoop
+        // names no line (TxHDL issue 1275).
+        let (_dc_snoop_out, dc_snoop) = signal::<U<9>, DefaultClock>();
         join2(
             self.cpu.run(
                 (
                     rst, mei, mti, msi, rdata_rx, done_rx, grant_rx, haltreq, resumereq, dbg_regno,
-                    dbg_wdata, dbg_we, time, sei,
+                    dbg_wdata, dbg_we, time, sei, dc_snoop,
                 ),
                 (
                     halt, instr, retire, issue_tx, wbeat_tx, release_tx, debug, dbg_rdata,

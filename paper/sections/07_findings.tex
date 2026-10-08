@@ -44,6 +44,23 @@ is TxHDL issue 1348~\cite{issue1348}. Adding the two registers, with
 their fields read-only zero where the core lacks the feature, would
 let the core be described as 1.12 and the Svade suite run.
 
+\subsection{Since the first run}
+
+TxHDL fixed both issues by commit \code{48daf9778add}, and the run of
+2026-10-08 against that commit passes
+\code{SvSm\_sv\_mstatus\_tvm\_test-00}. The core now has
+\code{menvcfg} and \code{senvcfg} too, but this report still
+describes it as a 1.11 core, so the Svade suite still does not run.
+
+The same commit adds a data cache for the DDR3, and with it five tests
+fail that passed before: the byte, halfword and word loads,
+\code{I-lb-00}, \code{I-lbu-00}, \code{I-lh-00}, \code{I-lhu-00} and
+\code{I-lw-00}. Each fails where it stores a new value to a line the
+cache holds and loads it back at once. The load returns the value the
+case before it stored. The tests run in the cached range of the
+address space, and the uncached path has no such failure. The issue is
+TxHDL issue 1431~\cite{issue1431}.
+
 \subsection{A choice that is not a defect}
 
 The first run had six more failures, all in tests of atomic
