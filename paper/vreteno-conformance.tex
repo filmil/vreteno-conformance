@@ -56,8 +56,10 @@ compare \NChecks{} values with Sail's. The first run, on 2026-10-07,
 had one failure, and it is a real defect: the core cannot set
 \code{mstatus.TVM}. A second finding of that run is that the core has
 no \code{menvcfg}, so it conforms to version 1.11 of the privileged
-specification rather than 1.12. Both are filed as issues against
-TxHDL. The build that produces this report fetches
+specification rather than 1.12. Both were filed against TxHDL and
+fixed by 2026-10-08. The run of that day found a new defect: the core's
+new data cache returns a stale word to a load right after a store to
+the same line. The build that produces this report fetches
 every tool by checksum, and it runs every day against the latest
 commit of the core.
 \end{abstract}
@@ -125,6 +127,10 @@ TxHDL issue 1347, ``mstatus.TVM, TW and TSR are not writable,''
 TxHDL issue 1348, ``no menvcfg or senvcfg, so the core is privileged
 version 1.11,''
 \url{https://git.hdlfactory.com/HDL/txhdl/issues/1348}.
+\bibitem{issue1431}
+TxHDL issue 1431, ``a load right after a store to a cached line
+returns the line's old word,''
+\url{https://git.hdlfactory.com/HDL/txhdl/issues/1431}.
 \end{thebibliography}
 
 \end{document}
