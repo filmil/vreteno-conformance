@@ -59,7 +59,9 @@ fail that passed before: the byte, halfword and word loads,
 cache holds and loads it back at once. The load returns the value the
 case before it stored. The tests run in the cached range of the
 address space, and the uncached path has no such failure. The issue is
-TxHDL issue 1431~\cite{issue1431}.
+TxHDL issue 1431~\cite{issue1431}. TxHDL fixed it by commit
+\code{e9681300a8b2}, and the run of 2026-10-09 against that commit
+passes all five tests.
 
 \subsection{A choice that is not a defect}
 

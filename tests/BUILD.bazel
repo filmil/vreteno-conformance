@@ -41,13 +41,6 @@ VRETENO_PARAMS = {
 
 # Tests the core is known to fail, each with the issue that tracks it.
 VRETENO_KNOWN_FAILURES = {
-    # A load right behind a store to a line the data cache holds reads
-    # the line's old word.
-    "I-lb-00": "https://git.hdlfactory.com/HDL/txhdl/issues/1431",
-    "I-lbu-00": "https://git.hdlfactory.com/HDL/txhdl/issues/1431",
-    "I-lh-00": "https://git.hdlfactory.com/HDL/txhdl/issues/1431",
-    "I-lhu-00": "https://git.hdlfactory.com/HDL/txhdl/issues/1431",
-    "I-lw-00": "https://git.hdlfactory.com/HDL/txhdl/issues/1431",
 }
 
 # Suites left out by hand, with the reason.
