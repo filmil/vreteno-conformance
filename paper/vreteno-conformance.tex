@@ -58,8 +58,8 @@ had one failure, and it is a real defect: the core cannot set
 no \code{menvcfg}, so it conforms to version 1.11 of the privileged
 specification rather than 1.12. Both were filed against TxHDL and
 fixed by 2026-10-08. The run of that day found a new defect: the core's
-new data cache returns a stale word to a load right after a store to
-the same line. The build that produces this report fetches
+new data cache returned a stale word to a load right after a store to
+the same line. It was filed, and fixed by 2026-10-09. The build that produces this report fetches
 every tool by checksum, and it runs every day against the latest
 commit of the core.
 \end{abstract}
