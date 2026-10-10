@@ -174,6 +174,11 @@ impl Unit for Dut {
         // No other host writes the memory here, so the data cache's snoop
         // names no line (TxHDL issue 1275).
         let (_dc_snoop_out, dc_snoop) = signal::<U<9>, DefaultClock>();
+        // Whether the core waits in wfi: no pin, since no test waits.
+        let (asleep, _asleep) = signal::<Bit, DefaultClock>();
+        // The memory port answers the design's reset itself (TxHDL issue
+        // 1532).
+        let pins_rst = rst.clone();
         join2(
             self.cpu.run(
                 (
@@ -181,7 +186,7 @@ impl Unit for Dut {
                     dbg_wdata, dbg_we, time, sei, dc_snoop,
                 ),
                 (
-                    halt, instr, retire, issue_tx, wbeat_tx, release_tx, debug, dbg_rdata,
+                    halt, instr, retire, issue_tx, wbeat_tx, release_tx, debug, dbg_rdata, asleep,
                 ),
             ),
             join2(
@@ -191,6 +196,7 @@ impl Unit for Dut {
                 ),
                 self.pins.run(
                     AxiPerPinsIn {
+                        rst: pins_rst,
                         pins: mem,
                         aw: aw_rx,
                         ar: ar_rx,
