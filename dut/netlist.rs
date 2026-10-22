@@ -24,7 +24,7 @@ use txhdl::{lower, Trace};
 use txhdl_parts::bus::axi::{Ar, Aw, AxiHost, Done, Grant, Issue, B, R, W};
 use txhdl_parts::bus::axi_per_pins::{AxiPerDriven, AxiPerPins, AxiPerPinsIn, AxiPerPinsOut};
 use vreteno32::core::Writeback;
-use vreteno32::hart::Hart;
+use vreteno32::hart::{Hart, HartIn, HartOut};
 
 /// The identifier width of the link, as the board uses it.
 const IW: usize = 2;
@@ -181,13 +181,34 @@ impl Unit for Dut {
         let pins_rst = rst.clone();
         join2(
             self.cpu.run(
-                (
-                    rst, mei, mti, msi, rdata_rx, done_rx, grant_rx, haltreq, resumereq, dbg_regno,
-                    dbg_wdata, dbg_we, time, sei, dc_snoop,
-                ),
-                (
-                    halt, instr, retire, issue_tx, wbeat_tx, release_tx, debug, dbg_rdata, asleep,
-                ),
+                HartIn {
+                    rst,
+                    irq: mei,
+                    tirq: mti,
+                    sirq: msi,
+                    rdata: rdata_rx,
+                    done: done_rx,
+                    grant: grant_rx,
+                    haltreq,
+                    resumereq,
+                    dbg_regno,
+                    dbg_wdata,
+                    dbg_we,
+                    time,
+                    seirq: sei,
+                    dc_snoop,
+                },
+                HartOut {
+                    halt,
+                    instr,
+                    wb: retire,
+                    issue: issue_tx,
+                    wbeat: wbeat_tx,
+                    release: release_tx,
+                    dbg: debug,
+                    dbg_rdata,
+                    asleep,
+                },
             ),
             join2(
                 self.host.run(
